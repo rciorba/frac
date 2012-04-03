@@ -9,7 +9,7 @@ import (
 	"runtime"
 )
 
-const size = 128
+const size = 1000
 const max_iter = 10000
 
 func square(x int, y int) (int, int) {
@@ -17,7 +17,7 @@ func square(x int, y int) (int, int) {
 }
 
 
-func to_img(brot [size][size]uint) {
+func to_img(brot* [size][size]uint) {
 	max := uint(0)
 	gray := image.NewGray16(image.Rect(0,0,size,size))
 	for x:=0; x<size; x++ {
@@ -54,17 +54,37 @@ func mandelbrot(x int, y int) uint {
 
 // setup 4 goroutines all consuming from one queue
 // all 4 goroutines will send one message when they finish on a second queue
+func consumer(brot *[size][size]uint, in chan * image.Point, done chan bool) {
+	//var p image.Point
+	p := <- in
+	for p.X>=0 {
+		brot[p.X][p.Y] = mandelbrot(p.X, p.Y)
+		p = <- in
+	}
+	done <- true
+}
+
 
 func main() {
 	runtime.GOMAXPROCS(4)
 	var brot [size][size]uint
-	// in := make(chan image.Point)
-	// finished := make(chan bool)
+	in := make(chan *image.Point, 12)
+	finished := make(chan bool, 4)
+	for i:=0; i<4; i++ {
+		go consumer(&brot, in, finished)
+	}
 	for x:=0; x<size; x++ {
 		fmt.Print(".")
 		for y:=0; y<size; y++ {
-			brot[x][y] = mandelbrot(x, y)
+			in <- &image.Point{x, y}
 		}
 	}
-	to_img(brot)
+	in <- &image.Point{-1, -1}
+	in <- &image.Point{-1, -1}
+	in <- &image.Point{-1, -1}
+	in <- &image.Point{-1, -1}
+	for i:=0; i<4; i++ {
+		<-finished
+	}
+	to_img(&brot)
 }
