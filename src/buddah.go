@@ -9,7 +9,7 @@ import (
 	"runtime"
 )
 
-const size = 1000
+const size = 4000
 const max_iter = 10000
 const procs = 4
 
@@ -35,10 +35,14 @@ func to_img(brot* [size][size]uint) {
 	png.Encode(w, gray)
 }
 
+func transform(x, y int) complex128 {
+	return complex(
+		-2 + (float64(x)/size * 3),
+		-1.5 + (float64(y)/size * 3))
+}
 
-
-func mandelbrot(x int, y int) uint {
-	c := complex(float64(x)/size, float64(y)/size)
+func mandelbrot(x,y int) uint {
+	c := transform(x, y)
 	z := c
 	var i = uint(0)
 	for (i<max_iter && real(z)+imag(z)<4) {
