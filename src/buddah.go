@@ -11,6 +11,7 @@ import (
 
 const size = 1000
 const max_iter = 10000
+const procs = 4
 
 func square(x int, y int) (int, int) {
 	return (x*x - y*y), (2*x*y)
@@ -18,13 +19,9 @@ func square(x int, y int) (int, int) {
 
 
 func to_img(brot* [size][size]uint) {
-	max := uint(0)
 	gray := image.NewGray16(image.Rect(0,0,size,size))
 	for x:=0; x<size; x++ {
 		for y:=0; y<size; y++ {
-			if brot[x][y] > max{
-				max = brot[x][y]
-			}
 			if brot[x][y] >= max_iter{
 				gray.SetGray16(x, y, color.Black)
 			} else {
@@ -34,7 +31,6 @@ func to_img(brot* [size][size]uint) {
 			}
 		}
 	}
-	fmt.Printf("%v", max)
 	w, _ := os.OpenFile("./brot.png", os.O_CREATE|os.O_WRONLY, 0666)
 	png.Encode(w, gray)
 }
@@ -57,7 +53,7 @@ func mandelbrot(x int, y int) uint {
 func consumer(brot *[size][size]uint, in chan * image.Point, done chan bool) {
 	//var p image.Point
 	p := <- in
-	for p.X>=0 {
+	for p != nil {
 		brot[p.X][p.Y] = mandelbrot(p.X, p.Y)
 		p = <- in
 	}
@@ -66,11 +62,11 @@ func consumer(brot *[size][size]uint, in chan * image.Point, done chan bool) {
 
 
 func main() {
-	runtime.GOMAXPROCS(4)
+	runtime.GOMAXPROCS(procs)
 	var brot [size][size]uint
 	in := make(chan *image.Point, 12)
-	finished := make(chan bool, 4)
-	for i:=0; i<4; i++ {
+	finished := make(chan bool, procs)
+	for i:=0; i<procs; i++ {
 		go consumer(&brot, in, finished)
 	}
 	for x:=0; x<size; x++ {
@@ -79,11 +75,10 @@ func main() {
 			in <- &image.Point{x, y}
 		}
 	}
-	in <- &image.Point{-1, -1}
-	in <- &image.Point{-1, -1}
-	in <- &image.Point{-1, -1}
-	in <- &image.Point{-1, -1}
-	for i:=0; i<4; i++ {
+	for i:=0; i<procs; i++ {
+		in <- nil
+	}
+	for i:=0; i<procs; i++ {
 		<-finished
 	}
 	to_img(&brot)
