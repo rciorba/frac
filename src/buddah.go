@@ -20,12 +20,12 @@ func to_img(brot* [size][size]uint, max uint) {
 	for x:=0; x<size; x++ {
 		for y:=0; y<size; y++ {
 			pix := brot[x][y]
-			norm := float64(brot[x][y]*1000)/float64(max)*65534
-			if norm > 65535{
-				norm = 65535
+			norm := float64(brot[x][y]*4)/float64(max)*65534
+			if norm > 65534{
+				norm = 65534
 			}
-			if pix > 65535{
-				pix = 65535
+			if pix > 65534{
+				pix = 65534
 			}
 			gray.SetGray16(
 				x, y,
@@ -103,7 +103,7 @@ func brot_routine(brot *[size][size]uint, points chan complex128,
 	point, open := <- points
 	for open {
 		iterations, orbit := mandelbrot(point)
-		if iterations < max_iter {
+		if iterations == max_iter {
 			orbits <- orbit
 		}
 		point, open = <- points
